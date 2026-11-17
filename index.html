@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pizzería La Esquina — pedidos por voz</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🍕</span>
+    <div>
+      <h1 id="tienda-nombre">Pizzería La Esquina</h1>
+      <p class="sub">Pedidos por voz · medidor de orquestador</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span id="modelo-badge" class="badge mono">—</span>
+    <button id="btn-config" class="ghost">Configurar</button>
+  </div>
+</header>
+
+<div id="aviso-clave" class="banner hidden" role="status"></div>
+
+<main class="layout">
+
+  <!-- ============ PEDIDO ============ -->
+  <section class="panel" id="panel-pedido">
+    <div class="panel-head">
+      <h2><span class="num">1</span> Pedido del cliente</h2>
+      <span id="horario" class="muted mono"></span>
+    </div>
+
+    <div class="mic-row">
+      <button id="btn-mic" class="mic" title="Grabar pedido">
+        <span class="mic-icon">🎙️</span>
+        <span class="mic-label">Grabar</span>
+      </button>
+      <div class="mic-info">
+        <strong id="mic-estado">Micrófono listo</strong>
+        <span id="mic-detalle" class="muted">Hablá el pedido; el texto se puede editar.</span>
+      </div>
+    </div>
+
+    <label class="sr-only" for="transcripcion">Pedido transcripto</label>
+    <textarea id="transcripcion" rows="5" placeholder="El pedido transcripto aparece acá. También podés escribirlo o editarlo a mano."></textarea>
+
+    <div class="row wrap">
+      <label class="field">
+        <span class="muted small">Ejemplos</span>
+        <select id="select-ejemplo">
+          <option value="">Elegir un caso…</option>
+        </select>
+      </label>
+      <label class="switch" title="No llama al modelo: usa un decisor local por reglas">
+        <input type="checkbox" id="chk-demo">
+        <span>Simular modelo (sin API)</span>
+      </label>
+    </div>
+
+    <button id="btn-enviar" class="primary big">Enviar al orquestador</button>
+    <p id="hint-envio" class="hint"></p>
+  </section>
+
+  <!-- ============ RESULTADO ============ -->
+  <section class="panel" id="panel-resultado">
+    <div class="panel-head">
+      <h2><span class="num">2</span> Resultado</h2>
+      <span id="resultado-estado" class="badge">sin pedido</span>
+    </div>
+    <div id="resultado" class="resultado-vacio">
+      <p class="muted">Cuando el orquestador termine vas a ver acá la confirmación, la pregunta de aclaración o el error.</p>
+    </div>
+  </section>
+
+  <!-- ============ TRAZA ============ -->
+  <section class="panel" id="panel-traza">
+    <div class="panel-head">
+      <h2><span class="num">3</span> Traza del orquestador</h2>
+      <div class="row tight">
+        <button id="btn-exportar" class="ghost small" disabled>Exportar JSON</button>
+        <button id="btn-copiar" class="ghost small" disabled>Copiar</button>
+      </div>
+    </div>
+
+    <div id="metricas" class="metricas hidden"></div>
+    <ol id="timeline" class="timeline"></ol>
+    <p id="traza-vacia" class="muted">Sin corridas todavía. Enviá un pedido para ver cada paso, sus tool calls, latencias y tokens.</p>
+  </section>
+
+  <!-- ============ HISTORIAL ============ -->
+  <section class="panel" id="panel-historial">
+    <div class="panel-head">
+      <h2><span class="num">4</span> Historial</h2>
+      <button id="btn-borrar-historial" class="ghost small">Borrar</button>
+    </div>
+    <ul id="historial" class="historial"></ul>
+    <p id="historial-vacio" class="muted">Las últimas corridas quedan guardadas en este navegador.</p>
+  </section>
+
+  <!-- ============ EVALUACIÓN ============ -->
+  <section class="panel wide" id="panel-eval">
+    <div class="panel-head">
+      <h2><span class="num">5</span> Evaluación del orquestador</h2>
+      <div class="row tight">
+        <button id="btn-eval-exportar" class="ghost small" disabled>Exportar JSON</button>
+        <button id="btn-eval" class="primary small">Correr 10 casos</button>
+      </div>
+    </div>
+
+    <p class="muted small">
+      Corre el set de <code>data/pedidos-prueba.json</code>: ambigüedades, ítems inexistentes,
+      cantidades habladas y stock. El mismo texto pasa primero por el simulador y después por el
+      modelo real, y se compara estado, total, líneas y secuencia de skills.
+    </p>
+
+    <label class="switch">
+      <input type="checkbox" id="chk-eval-modelo" checked>
+      <span>Comparar contra el modelo real (requiere clave)</span>
+    </label>
+
+    <p id="eval-progreso" class="muted small"></p>
+    <div id="eval-resumen" class="metricas hidden"></div>
+
+    <div id="eval-tabla-wrap" class="eval-tabla-wrap hidden">
+      <table id="eval-tabla" class="eval-tabla"></table>
+    </div>
+
+    <p id="eval-vacio" class="muted">Todavía no corriste el set.</p>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <span class="muted small">La clave de API queda en este navegador y se envía directo a Google. El catálogo vive en <code>data/menu.json</code> y el set de prueba en <code>data/pedidos-prueba.json</code>.</span>
+</footer>
+
+<!-- ============ MODAL CONFIG ============ -->
+<dialog id="dlg-config" class="dlg">
+  <form method="dialog" class="dlg-body" id="form-config">
+    <h2>Configuración del orquestador</h2>
+    <p class="muted small">
+      Necesitás una API key de Google AI Studio (tiene free tier). Se guarda solo en
+      <code>localStorage</code> de este navegador y no pasa por ningún servidor nuestro.
+      En el free tier Google puede usar los prompts para mejorar sus productos.
+    </p>
+
+    <label class="field">
+      <span>API key de Gemini</span>
+      <input id="input-key" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+    </label>
+
+    <label class="field">
+      <span>Modelo</span>
+      <select id="select-modelo"></select>
+    </label>
+
+    <p class="muted small">
+      Creá una clave en
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.
+    </p>
+
+    <div class="row end">
+      <button type="button" id="btn-borrar-key" class="ghost">Borrar clave</button>
+      <button type="submit" value="ok" class="primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

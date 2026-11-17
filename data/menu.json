@@ -1,0 +1,188 @@
+{
+  "tienda": {
+    "nombre": "Pizzería La Esquina",
+    "moneda": "ARS",
+    "tiempoEstimadoMin": 35,
+    "horario": "19:00 a 00:00",
+    "telefono": "11 5555-0199"
+  },
+  "extras": [
+    { "id": "extra_queso", "nombre": "Extra queso", "precio": 1500, "alias": ["extra queso", "mas queso", "doble queso"] },
+    { "id": "extra_aceitunas", "nombre": "Aceitunas", "precio": 900, "alias": ["aceitunas", "con aceitunas"] },
+    { "id": "extra_huevo", "nombre": "Huevo duro", "precio": 800, "alias": ["huevo", "huevo duro"] }
+  ],
+  "items": [
+    {
+      "id": "pizza_mozzarella",
+      "nombre": "Pizza Mozzarella",
+      "categoria": "pizzas",
+      "alias": ["muzza", "muzzarella", "mozzarella", "mozarella", "muzarela", "de muzza", "comun"],
+      "stock": 40,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 8900 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 13900 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 18900 }
+      ]
+    },
+    {
+      "id": "pizza_napolitana",
+      "nombre": "Pizza Napolitana",
+      "categoria": "pizzas",
+      "alias": ["napolitana", "napo", "napol"],
+      "stock": 30,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 9400 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 14600 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 19800 }
+      ]
+    },
+    {
+      "id": "pizza_fugazzeta",
+      "nombre": "Pizza Fugazzeta",
+      "categoria": "pizzas",
+      "alias": ["fugazzeta", "fugazza", "fugazeta", "cebolla"],
+      "stock": 22,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 9200 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 14200 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 19400 }
+      ]
+    },
+    {
+      "id": "pizza_jamon_morrones",
+      "nombre": "Pizza Jamón y Morrones",
+      "categoria": "pizzas",
+      "alias": ["jamon y morrones", "jamon y morron", "jamon morrones", "morrones"],
+      "stock": 18,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 9900 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 15200 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 20800 }
+      ]
+    },
+    {
+      "id": "pizza_calabresa",
+      "nombre": "Pizza Calabresa",
+      "categoria": "pizzas",
+      "alias": ["calabresa", "calabreza", "salame"],
+      "stock": 20,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 9600 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 14800 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 20100 }
+      ]
+    },
+    {
+      "id": "pizza_cuatro_quesos",
+      "nombre": "Pizza Cuatro Quesos",
+      "categoria": "pizzas",
+      "alias": ["cuatro quesos", "4 quesos", "cuatroquesos"],
+      "stock": 16,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 10200 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 15800 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 21500 }
+      ]
+    },
+    {
+      "id": "pizza_rucula",
+      "nombre": "Pizza Rúcula y Parmesano",
+      "categoria": "pizzas",
+      "alias": ["rucula", "rucula y parmesano", "parmesano"],
+      "stock": 14,
+      "extrasPermitidos": ["extra_queso", "extra_aceitunas"],
+      "variantes": [
+        { "id": "chica", "nombre": "Chica (6 porciones)", "precio": 10400 },
+        { "id": "mediana", "nombre": "Mediana (8 porciones)", "precio": 16200 },
+        { "id": "grande", "nombre": "Grande (12 porciones)", "precio": 22100 }
+      ]
+    },
+    {
+      "id": "empanada_carne",
+      "nombre": "Empanada de Carne",
+      "categoria": "empanadas",
+      "alias": ["empanada de carne", "carne", "carne cortada a cuchillo", "cuchillo"],
+      "stock": 30,
+      "precio": 2200,
+      "unidad": "unidad"
+    },
+    {
+      "id": "empanada_pollo",
+      "nombre": "Empanada de Pollo",
+      "categoria": "empanadas",
+      "alias": ["empanada de pollo", "pollo"],
+      "stock": 45,
+      "precio": 2200,
+      "unidad": "unidad"
+    },
+    {
+      "id": "empanada_jamon_queso",
+      "nombre": "Empanada de Jamón y Queso",
+      "categoria": "empanadas",
+      "alias": ["jamon y queso", "jyq", "jamon queso"],
+      "stock": 50,
+      "precio": 2200,
+      "unidad": "unidad"
+    },
+    {
+      "id": "empanada_verdura",
+      "nombre": "Empanada de Verdura",
+      "categoria": "empanadas",
+      "alias": ["verdura", "empanada de verdura"],
+      "stock": 24,
+      "precio": 2200,
+      "unidad": "unidad"
+    },
+    {
+      "id": "bebida_coca_15",
+      "nombre": "Coca-Cola 1,5 L",
+      "categoria": "bebidas",
+      "alias": ["coca cola 1 5", "coca de litro y medio", "coca 1 5", "coca cola grande", "coca grande", "coca de litro"],
+      "stock": 18,
+      "precio": 5200,
+      "unidad": "botella"
+    },
+    {
+      "id": "bebida_coca_lata",
+      "nombre": "Coca-Cola Lata 473 ml",
+      "categoria": "bebidas",
+      "alias": ["coca lata", "lata de coca", "coca cola lata", "lata"],
+      "stock": 36,
+      "precio": 2600,
+      "unidad": "lata"
+    },
+    {
+      "id": "bebida_agua",
+      "nombre": "Agua Mineral 500 ml",
+      "categoria": "bebidas",
+      "alias": ["agua", "agua mineral", "agua sin gas"],
+      "stock": 40,
+      "precio": 1900,
+      "unidad": "botella"
+    },
+    {
+      "id": "bebida_cerveza",
+      "nombre": "Cerveza Rubia 1 L",
+      "categoria": "bebidas",
+      "alias": ["cerveza", "birra", "rubia", "quilmes"],
+      "stock": 12,
+      "precio": 6400,
+      "unidad": "botella"
+    },
+    {
+      "id": "bebida_fanta",
+      "nombre": "Fanta Naranja 1,5 L",
+      "categoria": "bebidas",
+      "alias": ["fanta", "fanta naranja", "naranja"],
+      "stock": 10,
+      "precio": 4900,
+      "unidad": "botella"
+    }
+  ]
+}

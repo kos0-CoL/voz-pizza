@@ -1,0 +1,102 @@
+{
+  "descripcion": "Set de 10 pedidos difíciles para medir el orquestador. Cada caso trae el resultado esperado calculado contra data/menu.json.",
+  "casos": [
+    {
+      "id": "P01",
+      "dificultad": "cantidad hablada + plural de tamaño",
+      "texto": "Hola, quiero dos muzzas medianas y una coca de litro y medio.",
+      "espera": {
+        "estado": "confirmado",
+        "total": 33000,
+        "lineas": [
+          { "item_id": "pizza_mozzarella", "variante_id": "mediana", "cantidad": 2, "extras": [] },
+          { "item_id": "bebida_coca_15", "variante_id": null, "cantidad": 1, "extras": [] }
+        ]
+      },
+      "nota": "\"dos muzzas medianas\" exige pluralizar el alias y el tamaño. 2 × 13900 + 5200."
+    },
+    {
+      "id": "P02",
+      "dificultad": "ambigüedad de tamaño",
+      "texto": "Quiero una pizza de napolitana.",
+      "espera": { "estado": "aclaracion" },
+      "nota": "Pizza sin tamaño: debe preguntar chica/mediana/grande, no elegir."
+    },
+    {
+      "id": "P03",
+      "dificultad": "ítem inexistente mezclado con uno válido",
+      "texto": "Una pizza de anchoas y una muzza chica.",
+      "espera": { "estado": "aclaracion" },
+      "nota": "No hay anchoas en la carta: no debe confirmar solo la muzza en silencio."
+    },
+    {
+      "id": "P04",
+      "dificultad": "cantidad hablada + stock insuficiente",
+      "texto": "Veinte pizzas de rúcula grandes.",
+      "espera": { "estado": "aclaracion" },
+      "nota": "\"veinte\" en palabras y stock 14: debe pedir ajuste, no confirmar."
+    },
+    {
+      "id": "P05",
+      "dificultad": "cantidad omitida en ítem en plural",
+      "texto": "Una muzza grande y empanadas de carne.",
+      "espera": { "estado": "aclaracion" },
+      "nota": "\"empanadas\" sin número: no debe asumir una."
+    },
+    {
+      "id": "P06",
+      "dificultad": "media docena + bebida",
+      "texto": "Media docena de empanadas de pollo y una birra.",
+      "espera": {
+        "estado": "confirmado",
+        "total": 19600,
+        "lineas": [
+          { "item_id": "empanada_pollo", "variante_id": null, "cantidad": 6, "extras": [] },
+          { "item_id": "bebida_cerveza", "variante_id": null, "cantidad": 1, "extras": [] }
+        ]
+      },
+      "nota": "\"media docena\" = 6. 6 × 2200 + 6400."
+    },
+    {
+      "id": "P07",
+      "dificultad": "ítem inexistente",
+      "texto": "Una pizza de calzone.",
+      "espera": { "estado": "aclaracion" },
+      "nota": "No existe: debe ofrecer alternativas del catálogo."
+    },
+    {
+      "id": "P08",
+      "dificultad": "cantidad hablada en decenas",
+      "texto": "Diez birras.",
+      "espera": {
+        "estado": "confirmado",
+        "total": 64000,
+        "lineas": [
+          { "item_id": "bebida_cerveza", "variante_id": null, "cantidad": 10, "extras": [] }
+        ]
+      },
+      "nota": "\"diez\" en palabras, alias \"birra\" en plural. 10 × 6400."
+    },
+    {
+      "id": "P09",
+      "dificultad": "alias + extra + ítem compuesto",
+      "texto": "Una napo grande con más queso y dos empanadas de jamón y queso.",
+      "espera": {
+        "estado": "confirmado",
+        "total": 25700,
+        "lineas": [
+          { "item_id": "pizza_napolitana", "variante_id": "grande", "cantidad": 1, "extras": ["extra_queso"] },
+          { "item_id": "empanada_jamon_queso", "variante_id": null, "cantidad": 2, "extras": [] }
+        ]
+      },
+      "nota": "\"napo\" + \"más queso\" y el alias de tres palabras \"jamón y queso\". 19800 + 1500 + 4400."
+    },
+    {
+      "id": "P10",
+      "dificultad": "pedido sin contenido",
+      "texto": "Quiero pedir algo rico, no sé.",
+      "espera": { "estado": "aclaracion" },
+      "nota": "Sin ítems reconocibles: debe pedir que repitan el pedido, no inventar."
+    }
+  ]
+}
