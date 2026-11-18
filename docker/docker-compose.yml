@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  pizzeria:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pizzeria-la-esquina
+    ports:
+      - "8080:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    volumes:
+      - ../data:/app/data:ro
+      - ../index.html:/app/index.html:ro
+      - ../styles.css:/app/styles.css:ro
+      - ../app.js:/app/app.js:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  default:
+    name: pizzeria-network

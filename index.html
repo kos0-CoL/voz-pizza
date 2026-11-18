@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pizzería La Esquina — pedidos por voz</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 
@@ -18,6 +18,8 @@
   </div>
   <div class="topbar-actions">
     <span id="modelo-badge" class="badge mono">—</span>
+    <button id="btn-agencia" class="ghost" title="Ver orquestador, agentes y skills">🌳 Agencia</button>
+    <button id="btn-orchestrator-trace" class="ghost" title="Ver traza jerárquica del orquestador">🎭 Traza Flujo</button>
     <button id="btn-config" class="ghost">Configurar</button>
   </div>
 </header>
@@ -57,6 +59,10 @@
       <label class="switch" title="No llama al modelo: usa un decisor local por reglas">
         <input type="checkbox" id="chk-demo">
         <span>Simular modelo (sin API)</span>
+      </label>
+      <label class="switch" title="Conecta al backend Python via WebSocket (requiere servidor corriendo en puerto 8080)">
+        <input type="checkbox" id="chk-backend">
+        <span>Usar backend Python</span>
       </label>
     </div>
 
@@ -142,33 +148,290 @@
   <form method="dialog" class="dlg-body" id="form-config">
     <h2>Configuración del orquestador</h2>
     <p class="muted small">
-      Necesitás una API key de Google AI Studio (tiene free tier). Se guarda solo en
-      <code>localStorage</code> de este navegador y no pasa por ningún servidor nuestro.
+      Necesitás una API key de Google AI Studio (tiene free tier) <strong>o</strong> de OpenRouter.
+      Se guarda solo en <code>localStorage</code> de este navegador y no pasa por ningún servidor nuestro.
       En el free tier Google puede usar los prompts para mejorar sus productos.
     </p>
 
+    <!-- Proveedor -->
     <label class="field">
-      <span>API key de Gemini</span>
-      <input id="input-key" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+      <span>Proveedor</span>
+      <select id="select-proveedor">
+        <option value="gemini">Google Gemini (AI Studio)</option>
+        <option value="openrouter">OpenRouter</option>
+      </select>
     </label>
 
-    <label class="field">
-      <span>Modelo</span>
-      <select id="select-modelo"></select>
-    </label>
+    <!-- Gemini -->
+    <fieldset id="fieldset-gemini">
+      <legend>Google Gemini</legend>
+      <label class="field">
+        <span>API key de Gemini</span>
+        <input id="input-key-gemini" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+      </label>
+      <label class="field">
+        <span>Modelo</span>
+        <select id="select-modelo-gemini"></select>
+      </label>
+      <p class="muted small">
+        Creá una clave en
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.
+      </p>
+    </fieldset>
 
-    <p class="muted small">
-      Creá una clave en
-      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.
-    </p>
+    <!-- OpenRouter -->
+    <fieldset id="fieldset-openrouter" class="hidden">
+      <legend>OpenRouter</legend>
+      <label class="field">
+        <span>API key de OpenRouter</span>
+        <input id="input-key-openrouter" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
+      </label>
+      <label class="field">
+        <span>Modelo</span>
+        <select id="select-modelo-openrouter">
+          <option value="">Cargando modelos gratuitos…</option>
+        </select>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="chk-openrouter-free-only" checked>
+        <span>Solo modelos gratuitos (gratis en OpenRouter)</span>
+      </label>
+      <p class="muted small">
+        Creá una clave en
+        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">openrouter.ai/keys</a>.
+        Los modelos gratuitos se filtran automáticamente (precio = 0).
+      </p>
+    </fieldset>
+
+    <!-- TTS (Texto a Voz) -->
+    <fieldset id="fieldset-tts">
+      <legend>Texto a Voz (TTS) — Respuesta de voz del asistente</legend>
+      <label class="field">
+        <span>Motor TTS</span>
+        <select id="select-tts-engine">
+          <option value="browser">Navegador (Web Speech API - gratis, sin clave)</option>
+          <option value="edge-tts">Edge TTS (Microsoft - gratis, voces neuronales)</option>
+          <option value="piper">Piper TTS (local, requiere instalación)</option>
+          <option value="coqui">Coqui TTS (local, requiere instalación)</option>
+        </select>
+      </label>
+
+      <!-- Browser TTS -->
+      <div id="tts-browser" class="tts-panel">
+        <label class="field">
+          <span>Voz</span>
+          <select id="select-tts-voice"></select>
+        </label>
+        <label class="field">
+          <span>Velocidad</span>
+          <input type="range" id="input-tts-rate" min="0.5" max="2" step="0.1" value="1">
+          <output id="tts-rate-value">1.0</output>
+        </label>
+        <label class="field">
+          <span>Tono</span>
+          <input type="range" id="input-tts-pitch" min="0.5" max="2" step="0.1" value="1">
+          <output id="tts-pitch-value">1.0</output>
+        </label>
+        <button type="button" id="btn-tts-test" class="ghost small">Probar voz</button>
+      </div>
+
+      <!-- Edge TTS -->
+      <div id="tts-edge" class="tts-panel hidden">
+        <label class="field">
+          <span>Voz (ej: es-AR-ElenaNeural, es-ES-AlvaroNeural)</span>
+          <input id="input-edge-voice" type="text" placeholder="es-AR-ElenaNeural" list="edge-voices">
+          <datalist id="edge-voices"></datalist>
+        </label>
+        <p class="muted small">Voces: <a href="https://github.com/rany2/edge-tts/blob/master/VOICES.md" target="_blank">lista completa</a>. Formato: <code>locale-NameNeural</code>.</p>
+        <button type="button" id="btn-edge-tts-test" class="ghost small">Probar voz</button>
+      </div>
+
+      <!-- Piper TTS -->
+      <div id="tts-piper" class="tts-panel hidden">
+        <p class="muted small">Piper TTS corre localmente. Requiere <a href="https://github.com/rhasspy/piper" target="_blank">instalar Piper</a> y descargar un modelo de voz <code>.onnx</code>.</p>
+        <label class="field">
+          <span>Ruta del binario <code>piper</code></span>
+          <input id="input-piper-binary" type="text" placeholder="/usr/local/bin/piper o piper.exe">
+        </label>
+        <label class="field">
+          <span>Modelo de voz <code>.onnx</code></span>
+          <input id="input-piper-model" type="text" placeholder="/ruta/a/es_ES-carlfm-x_low.onnx">
+        </label>
+        <label class="field">
+          <span>Archivo de configuración <code>.json</code> (opcional)</span>
+          <input id="input-piper-config" type="text" placeholder="/ruta/a/es_ES-carlfm-x_low.onnx.json">
+        </label>
+        <div class="row">
+          <button type="button" id="btn-piper-install" class="primary small">Instalar / Actualizar Piper</button>
+          <button type="button" id="btn-piper-download-model" class="ghost small">Descargar modelo español</button>
+        </div>
+        <button type="button" id="btn-piper-test" class="ghost small">Probar voz</button>
+        <p id="piper-status" class="muted small"></p>
+      </div>
+
+      <!-- Coqui TTS -->
+      <div id="tts-coqui" class="tts-panel hidden">
+        <p class="muted small">Coqui TTS requiere Python y <code>pip install coqui-tts</code>. Descarga modelos al primer uso.</p>
+        <label class="field">
+          <span>Modelo (ID de Coqui)</span>
+          <input id="input-coqui-model" type="text" placeholder="tts_models/es/css10/vits" list="coqui-models">
+          <datalist id="coqui-models"></datalist>
+        </label>
+        <label class="field">
+          <span>Speaker (si el modelo es multi-speaker)</span>
+          <input id="input-coqui-speaker" type="text" placeholder="p273">
+        </label>
+        <label class="field">
+          <span>Language (si el modelo es multi-lingual)</span>
+          <input id="input-coqui-language" type="text" placeholder="es">
+        </label>
+        <div class="row">
+          <button type="button" id="btn-coqui-install" class="primary small">Instalar / Actualizar Coqui TTS</button>
+        </div>
+        <button type="button" id="btn-coqui-test" class="ghost small">Probar voz</button>
+        <p id="coqui-status" class="muted small"></p>
+      </div>
+    </fieldset>
+
+    <!-- Agentes Futuros (Pre-cableados) -->
+    <fieldset id="fieldset-agentes-futuros">
+      <legend>🔮 Agentes Futuros (Pre-cableados — Requieren configuración externa)</legend>
+      <p class="muted small">Estos agentes están implementados y listos para activar. Cada uno requiere infraestructura externa (ver docs/).</p>
+      
+      <label class="switch">
+        <input type="checkbox" id="chk-agent-whatsapp">
+        <span><strong>💬 WhatsApp</strong> — Envía/recibe pedidos por WhatsApp Web (whatsapp-web.js, puerto 3001)</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="chk-agent-notificaciones">
+        <span><strong>🔔 Notificaciones</strong> — Push (Web Push/Firebase), Email (SendGrid/Resend), Webhooks</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="chk-agent-cocina">
+        <span><strong>🍳 Cocina</strong> — Imprime tickets ESC/POS 80mm o integra con KDS</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="chk-agent-analytics">
+        <span><strong>📊 Analytics</strong> — Eventos a Mixpanel/Amplitude/GA4/PostHog, métricas agregadas</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="chk-agent-clientes">
+        <span><strong>👥 Clientes</strong> — CRM: búsqueda/creación por teléfono, historial, preferencias</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="chk-agent-config">
+        <span><strong>⚙️ Config Remota</strong> — Feature flags, precios dinámicos, horarios, promos (Firebase/LaunchDarkly)</span>
+      </label>
+    </fieldset>
 
     <div class="row end">
-      <button type="button" id="btn-borrar-key" class="ghost">Borrar clave</button>
+      <button type="button" id="btn-borrar-key" class="ghost">Borrar claves</button>
       <button type="submit" value="ok" class="primary">Guardar</button>
     </div>
   </form>
 </dialog>
 
-<script src="app.js"></script>
+<!-- ============ MODAL AGENCIA ============ -->
+<dialog id="dlg-agencia" class="dlg dlg-wide">
+  <form method="dialog" class="dlg-body" id="form-agencia">
+    <div class="dlg-header">
+      <h2>🌳 Agencia — Orquestador, Agentes & Skills</h2>
+      <p class="muted small">Visualización en tiempo real del flujo del orquestador. MVP: solo visualización. Futuro: edición de agentes, skills, toggles.</p>
+    </div>
+    
+    <div class="agencia-toolbar">
+      <div class="agencia-filters">
+        <label class="switch">
+          <input type="checkbox" id="chk-agencia-autoexpand" checked>
+          <span>Auto-expandir nodos activos</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="chk-agencia-show-skills" checked>
+          <span>Mostrar skills</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="chk-agencia-show-disabled" disabled>
+          <span>Mostrar deshabilitados (futuro)</span>
+        </label>
+      </div>
+      <div class="agencia-legend">
+        <span class="legend-item"><span class="legend-dot status-pending"></span> Pendiente</span>
+        <span class="legend-item"><span class="legend-dot status-active"></span> Activo</span>
+        <span class="legend-item"><span class="legend-dot status-completed"></span> Completado</span>
+        <span class="legend-item"><span class="legend-dot status-skipped"></span> Saltado</span>
+        <span class="legend-item"><span class="legend-dot status-error"></span> Error</span>
+      </div>
+    </div>
+
+    <div id="agencia-tree-container" class="agencia-tree-container">
+      <div id="agencia-tree" class="agencia-tree" role="tree" aria-label="Árbol del orquestador"></div>
+    </div>
+
+    <div class="agencia-detail-panel" id="agencia-detail-panel" hidden>
+      <h3>Detalle del nodo</h3>
+      <div id="agencia-detail-content" class="agencia-detail-content"></div>
+    </div>
+
+    <div class="dlg-footer">
+      <button type="button" id="btn-agencia-expand-all" class="ghost small">Expandir todo</button>
+      <button type="button" id="btn-agencia-collapse-all" class="ghost small">Colapsar todo</button>
+      <button type="button" id="btn-agencia-refresh" class="ghost small">🔄 Actualizar</button>
+      <button type="button" value="cancel" class="primary">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ MODAL ORCHESTRATOR TRACE TREE ============ -->
+<dialog id="dlg-orchestrator-trace" class="dlg dlg-wide">
+  <form method="dialog" class="dlg-body" id="form-orchestrator-trace">
+    <div class="dlg-header">
+      <h2>🎭 Traza del Orquestador — Flujo Jerárquico</h2>
+      <p class="muted small">Visualización jerárquica del flujo de decisiones del orquestador. Cada nodo muestra: decisión → agente activado → skills llamados → resultados → siguiente decisión.</p>
+    </div>
+
+    <div class="orchestrator-trace-toolbar">
+      <div class="orchestrator-trace-filters">
+        <label class="switch">
+          <input type="checkbox" id="chk-trace-autoexpand" checked>
+          <span>Auto-expandir nodos activos</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="chk-trace-show-steps" checked>
+          <span>Mostrar números de paso</span>
+        </label>
+        <button type="button" id="btn-trace-expand-all" class="ghost small">Expandir todo</button>
+        <button type="button" id="btn-trace-collapse-all" class="ghost small">Colapsar todo</button>
+        <button type="button" id="btn-trace-refresh" class="ghost small">🔄 Actualizar</button>
+      </div>
+      <div class="orchestrator-trace-legend">
+        <span class="legend-item"><span class="legend-dot orchestrator-decision"></span> Decisión Orquestador</span>
+        <span class="legend-item"><span class="legend-dot agent-activate"></span> Agente Activado</span>
+        <span class="legend-item"><span class="legend-dot agent-deactivate"></span> Agente Finalizado</span>
+        <span class="legend-item"><span class="legend-dot handoff"></span> Handoff</span>
+        <span class="legend-item"><span class="legend-dot skill-call"></span> Skill Llamado</span>
+        <span class="legend-item"><span class="legend-dot skill-result-ok"></span> Skill OK</span>
+        <span class="legend-item"><span class="legend-dot skill-result-error"></span> Skill Error</span>
+      </div>
+    </div>
+
+    <div class="orchestrator-trace-container">
+      <div class="orchestrator-trace-split">
+        <div class="orchestrator-trace-tree-pane" id="orchestrator-trace-tree-pane">
+          <div id="orchestrator-trace-tree" class="orchestrator-trace-tree" role="tree" aria-label="Árbol de traza del orquestador"></div>
+        </div>
+        <div class="orchestrator-trace-detail-pane" id="orchestrator-trace-detail-pane">
+          <h3>Detalle del evento</h3>
+          <div id="orchestrator-trace-detail" class="orchestrator-trace-detail" hidden></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dlg-footer">
+      <button type="button" value="cancel" class="primary">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/static/app.js"></script>
 </body>
 </html>
