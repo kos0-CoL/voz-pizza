@@ -1,0 +1,15 @@
+name: Question / Discussion
+description: Template para preguntar o discutir
+title: "Question: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Pregunta
+      description: ¿Qué quieres saber o discutir?
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto
+      description: ¿Qué has probado hasta ahora? ¿Qué estás considerando?

@@ -1,0 +1,14 @@
+# Default owners for repositories repository
+
+* @kos0-Col
+
+backend/            @kos0-Col
+backend/agents/     @kos0-Col
+backend/skills/     @kos0-Col
+backend/orchestrator/ @kos0-Col
+backend/main.py     @kos0-Col
+app.js              @kos0-Col
+styles.css          @kos0-Col
+index.html          @kos0-Col
+README.md           @kos0-Col
+proximos_desarrollos.md @kos0-Col

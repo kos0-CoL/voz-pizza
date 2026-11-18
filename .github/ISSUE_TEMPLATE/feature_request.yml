@@ -1,0 +1,32 @@
+name: Feature Request
+description: Template para sugerir nuevas funcionalidades
+title: "Feature Request: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del feature
+      description: ¿Qué necesitas agregar o mejorar?
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Caso de uso
+      description: ¿Para qué sirve en tu flujo de trabajo?
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      options:
+        - Alta (bloquea desarrollo)
+        - Media (importante)
+        - Baja (mejora estética o menor)
+  - type: checkboxes
+    id: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: Este feature no existe en main
+        - label: He revisado proximos_desarrollos.md (spec)

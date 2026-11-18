@@ -1,0 +1,42 @@
+name: Bug Report
+description: Template para reportar bugs
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del bug
+      description: ¿Qué pasa? ¿Qué se esperaba?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: ¿Cómo se reproduce?
+      placeholder: 1. Ingresar a...
+      placeholder: 2. Hacer...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: Navegador, versión de Node, sistema operativo
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severidad
+      options:
+        - 🔴 Crítico (bloquea producción)
+        - 🟠 Alto (afecta funcionalidad principal)
+        - 🟡 Medio (funcionalidad secundaria)
+        - 🟢 Bajo (adicional o estético)
+  - type: checkboxes
+    id: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: He reproducido el bug con el código más reciente
+        - label: No he encontrado un issue existente que lo cubra
