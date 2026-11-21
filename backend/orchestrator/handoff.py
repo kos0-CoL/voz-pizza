@@ -11,35 +11,40 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HandoffRequest:
-    from_agent: str
-    to_agent: str
-    reason: str
-    handoff_type: HandoffType
-    context: Dict
-    args: Dict
+    """Solicitud de transferencia entre agentes."""
+    from_agent: str        # Agente origen
+    to_agent: str          # Agente destino
+    reason: str            # Motivo del handoff
+    handoff_type: HandoffType  # Tipo: announced o discrete
+    context: Dict          # Contexto de conversación a transferir
+    args: Dict             # Argumentos adicionales
 
 
 @dataclass
 class EligibilityRule:
-    agent_id: str
-    conditions: List[str]
-    required: bool = True
+    """Regla de elegibilidad para activar un agente."""
+    agent_id: str          # ID del agente
+    conditions: List[str]  # Lista de condiciones (strings evaluados con eval())
+    required: bool = True  # Si es obligatoria
 
 
 class HandoffService:
+    """Servicio que gestiona transferencias (handoffs) entre agentes del pipeline."""
+
     def __init__(self, agents_config: Dict[str, AgentConfig], bus: MessageBus):
-        self.agents_config = agents_config
-        self.bus = bus
-        self.eligibility_rules = self._load_eligibility_rules()
-        self.hooks: Dict[str, List[Callable]] = {
+        self.agents_config = agents_config  # Configuración de todos los agentes
+        self.bus = bus                      # Bus de eventos para traces
+        self.eligibility_rules = self._load_eligibility_rules()  # Reglas de elegibilidad por agente
+        self.hooks: Dict[str, List[Callable]] = {  # Hooks de ciclo de vida
             "pre_handoff": [],
             "post_handoff": [],
             "on_agent_activate": [],
             "on_agent_deactivate": []
         }
-        self._agent_instances: Dict[str, Any] = {}
-    
+        self._agent_instances: Dict[str, Any] = {}  # Instancias de agentes registradas
+
     def _load_eligibility_rules(self) -> Dict[str, List]:
+        """Carga las reglas de elegibilidad para cada agente (evaluadas con eval())."""
         return {
             "intake": ["start_of_conversation", "after_clarification_response"],
             "validator": ["items_parsed and len(items_parsed) > 0"],
@@ -48,15 +53,18 @@ class HandoffService:
                 "last_handoff_reason and ('Falta tamaño' in last_handoff_reason or 'quedan' in last_handoff_reason and 'pediste' in last_handoff_reason or 'No tenemos' in last_handoff_reason or 'problemas' in last_handoff_reason.lower())"
             ]
         }
-    
+
     def register_agent_instance(self, agent_id: str, instance):
+        """Registra la instancia de un agente para poder activarlo/desactivarlo."""
         self._agent_instances[agent_id] = instance
-    
+
     def register_hook(self, hook_name: str, handler: Callable):
+        """Registra un handler para un hook de ciclo de vida."""
         if hook_name in self.hooks:
             self.hooks[hook_name].append(handler)
-    
+
     async def request_handoff(self, request: HandoffRequest) -> bool:
+        """Ejecuta un handoff completo: trace, elegibilidad, hooks, transferencia de contexto."""
         # Emit orchestrator decision trace
         decision_event_id = f"evt_{int(time.time()*1000000)}"
         await self.bus.publish("trace_event", TraceEvent(
@@ -86,34 +94,40 @@ class HandoffService:
             handoff_type=request.handoff_type.value,
             handoff_reason=request.reason
         ).model_dump())
-        
+
+        # Verificar elegibilidad del agente destino
         if not await self._check_eligibility(request.to_agent, request.context):
             await self.bus.publish("handoff_rejected", {"request": request.__dict__, "reason": "Eligibility check failed"})
             return False
-        
+
+        # Ejecutar hooks pre-handoff
         for hook in self.hooks["pre_handoff"]:
             if asyncio.iscoroutinefunction(hook):
                 await hook(request)
             else:
                 hook(request)
-        
+
+        # Anunciar handoff por TTS si es anunciado
         if request.handoff_type == HandoffType.ANNOUNCED:
             await self._announce_handoff(request)
-        
+
+        # Transferir contexto, desactivar origen, activar destino
         target_context = await self._transfer_context(request)
         await self._deactivate_agent(request.from_agent)
         await self._activate_agent(request.to_agent, target_context, request.args, decision_event_id)
-        
+
+        # Ejecutar hooks post-handoff
         for hook in self.hooks["post_handoff"]:
             if asyncio.iscoroutinefunction(hook):
                 await hook(request, target_context)
             else:
                 hook(request, target_context)
-        
+
         self._record_handoff(request)
         return True
-    
+
     async def _check_eligibility(self, agent_id: str, context: Dict) -> bool:
+        """Verifica si un agente cumple las reglas de elegibilidad para activarse."""
         logger.info(f"_check_eligibility: agent_id={agent_id}, context_keys={list(context.keys())}")
         if agent_id not in self.agents_config:
             logger.warning(f"_check_eligibility: agent {agent_id} not in config")
@@ -121,7 +135,7 @@ class HandoffService:
         if not self.agents_config[agent_id].enabled:
             logger.warning(f"_check_eligibility: agent {agent_id} not enabled")
             return False
-        
+
         rules = self.eligibility_rules.get(agent_id, [])
         logger.info(f"_check_eligibility: rules for {agent_id}: {rules}")
         for rule in rules:
@@ -131,23 +145,25 @@ class HandoffService:
                 return False
         logger.info(f"_check_eligibility: PASSED for {agent_id}")
         return True
-    
+
     def _eval_condition(self, condition: str, context: Dict) -> bool:
+        """Evalúa una condición de string usando eval() con contexto seguro."""
         try:
             safe_context = {k: v for k, v in context.items() if not k.startswith('_')}
-            # Añadir builtins seguros
             safe_builtins = {"len": len, "str": str, "int": int, "bool": bool, "list": list, "dict": dict}
             return eval(condition, {"__builtins__": safe_builtins}, safe_context)
         except Exception:
             return False
-    
+
     async def _announce_handoff(self, request: HandoffRequest):
+        """Anuncia el handoff por TTS al cliente."""
         await self.bus.publish("tts_speak", {
             "text": f"Te paso con {request.to_agent}. {request.reason}",
             "priority": "high"
         })
-    
+
     async def _transfer_context(self, request: HandoffRequest) -> Dict:
+        """Transfiere el contexto del agente origen al destino (últimos 6 mensajes del transcript)."""
         source = request.context
         return {
             "session_id": source.get("session_id"),
@@ -164,31 +180,37 @@ class HandoffService:
                 "type": request.handoff_type.value
             }]
         }
-    
+
     async def _activate_agent(self, agent_id: str, context: Dict, args: Dict, parent_event_id: Optional[str] = None):
+        """Activa la instancia de un agente con el contexto transferido."""
         instance = self._agent_instances.get(agent_id)
         if instance:
             ctx = ConversationContext(**context)
             await instance.activate(ctx, args, parent_event_id)
-    
+
     async def _deactivate_agent(self, agent_id: str):
+        """Desactiva la instancia de un agente."""
         instance = self._agent_instances.get(agent_id)
         if instance:
             await instance.deactivate()
-    
+
     def _record_handoff(self, request: HandoffRequest):
+        """Registra el handoff en el historial (placeholder para futura persistencia)."""
         pass
 
 
 class DynamicPlanner:
+    """Planificador dinámico que decide el siguiente agente basado en el contexto."""
+
     def __init__(self, handoff_service, llm_client=None):
         self.handoff_service = handoff_service
         self.llm_client = llm_client
         self.bus = handoff_service.bus
-    
+
     async def decide_next_agent(self, context: Dict) -> str:
+        """Decide el siguiente agente basado en reglas de routing del contexto."""
         session_id = context.get("session_id", "unknown")
-        
+
         if context.get("aclaracion_pendiente"):
             decision = "clarifier"
             reason = "Hay aclaración pendiente del usuario"
@@ -204,7 +226,7 @@ class DynamicPlanner:
         else:
             decision = await self._llm_routing(context)
             reason = "Decisión por LLM"
-        
+
         # Emit orchestrator decision trace
         await self.bus.publish("trace_event", TraceEvent(
             session_id=session_id,
@@ -229,8 +251,9 @@ class DynamicPlanner:
             handoff_type="planner_decision",
             handoff_reason=reason
         ).model_dump())
-        
+
         return decision
-    
+
     async def _llm_routing(self, context: Dict) -> str:
+        """Routing por LLM (fallback cuando ninguna regla aplica)."""
         return "intake"

@@ -1209,7 +1209,7 @@ SKILL_DEFINITIONS = {
     },
     "analytics_registrar_evento": {
         "description": "[FUTURO] Registra evento en analytics (Mixpanel/Amplitude/GA4).",
-        "enabled": False,
+        "enabled": True,
         "fn": analytics_registrar_evento
     },
     "analytics_obtener_metricas": {

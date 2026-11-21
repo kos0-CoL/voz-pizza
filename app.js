@@ -1356,20 +1356,26 @@ function handleBackendMessage(msg) {
         break;
       case 'skill_call':
         titulo = `🔧 Skill: ${data.skill_name}`;
-        meta = `args: ${JSON.stringify(data.args)}`;
+        meta = resumirArgsSkill(data.skill_name, data.args || {});
         pasoTipo = 'tool';
         break;
       case 'skill_result':
         titulo = `📋 Skill result: ${data.skill_name}`;
-        let resultMeta = 'ok';
         if (data.success && data.data) {
-          const dataStr = JSON.stringify(data.data);
-          resultMeta = dataStr.length > 80 ? `ok: ${dataStr.substring(0, 80)}...` : `ok: ${dataStr}`;
+          meta = `OK: ${resumirResultadoSkill(data.skill_name, data.data)}`;
         } else {
-          resultMeta = `error: ${data.error}`;
+          meta = `Error: ${data.error || 'sin datos'}`;
         }
-        meta = resultMeta;
         pasoTipo = 'tool';
+        break;
+      case 'orchestrator_decision':
+        titulo = `🎯 Orquestador: ${data.decision}`;
+        const resumen = [];
+        if (data.to_agent) resumen.push(`→ ${data.to_agent}`);
+        if (data.from_agent) resumen.push(`desde ${data.from_agent}`);
+        if (data.reason) resumen.push(data.reason);
+        meta = resumen.join(' · ');
+        pasoTipo = 'orquestador';
         break;
       default:
         titulo = `📡 ${eventType}`;
@@ -1431,6 +1437,28 @@ function handleBackendMessage(msg) {
       $('btn-copiar').disabled = false;
       state.ultima = backendCorrida;
       guardarEnHistorial(backendCorrida);
+    }
+  } else if (tipo === 'recibo') {
+    // Recibo PDF del pedido confirmado
+    const target = backendCorrida || state.ultima;
+    if (target && msg.pdf_base64) {
+      // Guardar referencia al recibo para descarga posterior
+      target.recibo = {
+        pedido: msg.pedido,
+        pdf_base64: msg.pdf_base64,
+        filename: msg.filename || `recibo_${msg.pedido}.pdf`
+      };
+      // Asegurar que state.ultima también tenga el recibo
+      if (state.ultima && state.ultima !== target) {
+        state.ultima.recibo = target.recibo;
+      }
+      // Habilitar botón de descargar recibo si existe
+      const btnRecibo = $('btn-descargar-recibo');
+      if (btnRecibo) {
+        btnRecibo.disabled = false;
+        btnRecibo.title = `Descargar recibo del pedido ${msg.pedido}`;
+      }
+      console.log(`[WS] Recibo PDF recibido para pedido ${msg.pedido}`);
     }
   } else if (tipo === 'tts') {
     // TTS del backend
@@ -1691,11 +1719,14 @@ async function hablar(texto) {
 }
 
 function hablarNavegador(texto) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    if (!speechSynthesis) { resolve(); return; }
     const utter = new SpeechSynthesisUtterance(texto);
     utter.lang = 'es-AR'; utter.rate = state.tts_rate; utter.pitch = state.tts_pitch;
     if (state.tts_voice) { const voz = speechSynthesis.getVoices().find(v => v.name === state.tts_voice); if (voz) utter.voice = voz; }
-    utter.onend = resolve; utter.onerror = reject; speechSynthesis.speak(utter);
+    utter.onend = resolve;
+    utter.onerror = (e) => { console.warn('Speech synthesis error:', e.error); resolve(); };
+    speechSynthesis.speak(utter);
   });
 }
 
@@ -1879,6 +1910,17 @@ const EJEMPLOS = ['Hola, quiero dos pizzas de muzza medianas y una coca de litro
    ============================================================ */
 
 function descargarCorrida() { if (!state.ultima) return; const blob = new Blob([JSON.stringify(state.ultima, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'corrida-' + state.ultima.id + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+function descargarRecibo() {
+  if (!state.ultima || !state.ultima.recibo) return;
+  const recibo = state.ultima.recibo;
+  const bytes = Uint8Array.from(atob(recibo.pdf_base64), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = recibo.filename || `recibo_${recibo.pedido}.pdf`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
 async function copiarCorrida() { if (!state.ultima) return; const txt = JSON.stringify(state.ultima, null, 2); try { await navigator.clipboard.writeText(txt); $('btn-copiar').textContent = 'Copiado'; setTimeout(() => { $('btn-copiar').textContent = 'Copiar'; }, 1400); } catch { $('hint-envio').textContent = 'No se pudo copiar. Usá Exportar JSON.'; } }
 
 function exportarEvaluacion() {
@@ -1935,7 +1977,7 @@ function init() {
   $('chk-demo').addEventListener('change', e => { if (e.target.checked) { mostrarAvisoClave(false); $('hint-envio').textContent = 'Modo simulado: orquestador multi-agente con reglas locales.'; } else { mostrarAvisoClave(state.proveedor === 'gemini' ? !state.key : !state.key_openrouter); $('hint-envio').textContent = ''; } });
   $('btn-enviar').addEventListener('click', ejecutarPedido);
   $('transcripcion').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ejecutarPedido(); } });
-  $('btn-exportar').addEventListener('click', descargarCorrida); $('btn-copiar').addEventListener('click', copiarCorrida);
+  $('btn-exportar').addEventListener('click', descargarCorrida); $('btn-copiar').addEventListener('click', copiarCorrida); $('btn-descargar-recibo').addEventListener('click', descargarRecibo);
   $('btn-eval').addEventListener('click', correrEvaluacion); $('btn-eval-exportar').addEventListener('click', exportarEvaluacion);
   $('btn-borrar-historial').addEventListener('click', () => { if (!state.historial.length) return; if (!confirm('¿Borrar historial?')) return; state.historial = []; localStorage.removeItem(LS.hist); pintarHistorial(); });
 }
@@ -2162,8 +2204,8 @@ function renderNode(nodeId, depth, showSkills) {
         </div>
         <span class="node-status status-${node.status}">${getStatusLabel(node.status)}</span>
         <span class="node-type-badge" ${isDisabled ? 'disabled' : ''}>${getTypeBadge(node)}</span>
+        ${skillsHtml}
       </div>
-      ${skillsHtml}
       ${childrenHtml}
     </li>
   `;
@@ -2250,7 +2292,7 @@ function showAgenciaDetail(nodeId) {
     ${events.length > 0 ? `
     <div class="detail-row">
       <span class="detail-label">Último evento</span>
-      <span class="detail-value"><pre>${esc(JSON.stringify(events[events.length - 1].data, null, 2))}</pre></span>
+      <span class="detail-value">${events[events.length - 1].event_type || 'N/A'}</span>
     </div>
     ` : ''}
     <div class="detail-row">
@@ -2303,14 +2345,24 @@ function handleAgenciaTraceEvent(trace) {
         agenciaState.nodes[agentMap[data.from_agent]].status = 'completed';
       }
       break;
-    case 'skill_call':
-      node.status = 'active';
-      break;
-    case 'skill_result':
-      if (!data.success) {
-        node.status = 'error';
+    case 'skill_call': {
+      const skillNode = Object.values(agenciaState.nodes).find(n => n.type === 'skill' && n.id === data.skill_name);
+      if (skillNode) {
+        skillNode.status = 'active';
+        skillNode.expanded = true;
+        const padre = agenciaState.nodes[skillNode.parent];
+        if (padre) padre.expanded = true;
       }
       break;
+    }
+    case 'skill_result': {
+      const skillNode = Object.values(agenciaState.nodes).find(n => n.type === 'skill' && n.id === data.skill_name);
+      if (skillNode) {
+        skillNode.status = data.success ? 'completed' : 'error';
+      }
+      if (node) node.status = 'completed';
+      break;
+    }
   }
   
   if ($('dlg-agencia')?.open) {
@@ -2450,16 +2502,14 @@ function formatTraceEventForDisplay(evt) {
     case 'skill_call':
       icon = '🔧';
       label = `Skill: ${data.skill_name}`;
-      detail = `Desde: ${sourceAgent || 'orchestrator'} | Args: ${JSON.stringify(data.args || {})}`;
+      detail = `Desde: ${sourceAgent || 'orchestrator'} | ${resumirArgsSkill(data.skill_name, data.args || {})}`;
       cssClass = 'skill-call';
       break;
     case 'skill_result':
       icon = data.success ? '📋' : '❌';
       label = `Resultado: ${data.skill_name}`;
       if (data.success && data.data) {
-        const dataStr = JSON.stringify(data.data);
-        // Mostrar solo el resumen si es largo
-        detail = dataStr.length > 150 ? `OK: ${dataStr.substring(0, 150)}...` : `OK: ${dataStr}`;
+        detail = `OK: ${resumirResultadoSkill(data.skill_name, data.data)}`;
       } else {
         detail = `Error: ${data.error}`;
       }
@@ -2509,16 +2559,9 @@ function renderOrchestratorTraceTree() {
     }
   });
   
-  // Construir jerarquía anidada
-  const buildTree = (parentId) => {
-    return roots.filter(node => node.parentEventId === parentId).map(node => {
-      node.children = buildTree(node.eventId);
-      return node;
-    });
-  };
-  
+  // El árbol ya tiene jerarquía de buildOrchestratorTraceTree. Renderizar raíces directamente.
   let html = '<ul class="orchestrator-trace-ul">';
-  buildTree(null).forEach(root => {
+  tree.forEach(root => {
     html += renderTraceNode(root, 0, true);
   });
   html += '</ul>';
@@ -2633,10 +2676,6 @@ function showTraceNodeDetail(eventId) {
       <span class="detail-value">${new Date(evt.timestamp * 1000).toLocaleTimeString()}</span>
     </div>
     ${display.detail ? `<div class="detail-row"><span class="detail-label">Detalle</span><span class="detail-value">${esc(display.detail)}</span></div>` : ''}
-    <div class="detail-row">
-      <span class="detail-label">Dato del evento</span>
-      <span class="detail-value"><pre>${esc(JSON.stringify(evt.data, null, 2))}</pre></span>
-    </div>
   `;
   panel.hidden = false;
 }
@@ -2657,67 +2696,6 @@ function cerrarOrchestratorTrace() {
   $('dlg-orchestrator-trace').close();
   // MANTENER el árbol para que siga recibiendo eventos
   // Solo se reconstruye cuando se abre de nuevo
-}
-
-function renderOrchestratorTraceTree() {
-  const container = $('orchestrator-trace-tree');
-  if (!container) return;
-  
-  const tree = orchestratorTraceState.tree;
-  
-  if (!tree || tree.length === 0) {
-    container.innerHTML = '<div class="trace-empty">Sin eventos de traza. Inicia una conversación para ver el flujo del orquestador.</div>';
-    return;
-  }
-  
-  // Construir jerarquía: raíces = eventos sin parentEventId (decisión del orquestador, agentes)
-  const roots = [];
-  const nodeMap = {};
-  
-  tree.forEach(node => {
-    nodeMap[node.eventId] = node;
-    if (node.parentEventId === null || node.parentEventId === undefined) {
-      roots.push(node);
-    }
-  });
-  
-  const buildTree = (parentId) => {
-    return roots.filter(node => node.parentEventId === parentId).map(node => {
-      node.children = buildTree(node.eventId);
-      return node;
-    });
-  };
-  
-  let html = '<ul class="orchestrator-trace-ul">';
-  buildTree(null).forEach(root => {
-    html += renderTraceNode(root, 0, true);
-  });
-  html += '</ul>';
-  container.innerHTML = html;
-
-  // Agregar event listeners para expand/colapse
-  container.querySelectorAll('.trace-node-toggle').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const nodeEl = e.target.closest('.trace-node');
-      if (nodeEl) {
-        const eventId = nodeEl.dataset.eventId;
-        toggleTraceNode(eventId);
-      }
-    });
-  });
-
-  // Click en nodo para ver detalle
-  container.querySelectorAll('.trace-node-content').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('.trace-node-toggle')) return;
-      const nodeEl = e.target.closest('.trace-node');
-      if (nodeEl) {
-        const eventId = nodeEl.dataset.eventId;
-        showTraceNodeDetail(eventId);
-      }
-    });
-  });
 }
 
 function initAgenciaHandlers() {
@@ -2778,6 +2756,85 @@ function abrirAgencia() {
   renderAgenciaTree();
   initAgenciaHandlers();
   $('dlg-agencia').showModal();
+}
+
+function resumirArgsSkill(skillName, args) {
+  // Resumen legible de argumentos de skill en el árbol de traza
+  try {
+    if (!args || typeof args !== 'object') return String(args);
+    const keys = Object.keys(args);
+    if (keys.length === 0) return '(sin args)';
+    // Verificar si args tiene campos comunes de skills de la pizzería
+    if (skillName === 'verificar_stock') {
+      return `item: ${args.item_id || args.item || '?'} · cant: ${args.cantidad || '?'}`;
+    }
+    if (skillName === 'calcular_total') {
+      const lineas = args.lineas || [];
+      return `líneas: ${lineas.length} · items: ${lineas.map(l => l.item_id || l.item || '?').join(', ')}`;
+    }
+    if (skillName === 'confirmar_pedido') {
+      return `cliente: ${args.nombre_cliente || '—'} · tel: ${args.telefono || '—'}`;
+    }
+    if (skillName === 'analytics_registrar_evento') {
+      return `evento: ${args.evento || '?'} · user: ${(args.user_id || '?').toString().substring(0, 20)}`;
+    }
+    if (skillName === 'parsear_pedido') {
+      return `texto: ${(args.texto || args.text || '').toString().substring(0, 40)}`;
+    }
+    if (skillName === 'pedir_aclaracion') {
+      return `pregunta: ${(args.pregunta || args.question || '').toString().substring(0, 40)}`;
+    }
+    // Fallback: mostrar claves y valores resumidos
+    const resumen = keys.map(k => {
+      const v = args[k];
+      if (Array.isArray(v)) return `${k}: [${v.length}]`;
+      if (typeof v === 'object') return `${k}: {${Object.keys(v).length}}`;
+      return `${k}: ${String(v).substring(0, 30)}`;
+    });
+    return resumen.join(' · ');
+  } catch (e) {
+    return '(args no serializables)';
+  }
+}
+
+function resumirResultadoSkill(skillName, data) {
+  // Resumen legible del resultado de skill en el árbol de traza
+  try {
+    if (!data || typeof data !== 'object') return String(data);
+    if (skillName === 'verificar_stock') {
+      return `ok: ${data.ok} · item: ${data.item_id || data.item || '?'} · stock: ${data.stock || '?'}`;
+    }
+    if (skillName === 'calcular_total') {
+      const total = data.total || (data.data && data.data.total);
+      const lineas = data.lineas ? data.lineas.length : (data.data && data.data.lineas ? data.data.lineas.length : 0);
+      return `ok: ${data.ok} · total: ${total || '?'} · líneas: ${lineas}`;
+    }
+    if (skillName === 'confirmar_pedido') {
+      return `ok: ${data.ok} · pedido: ${data.pedido || '?'} · total: ${data.total || '?'}`;
+    }
+    if (skillName === 'analytics_registrar_evento') {
+      return `ok: ${data.ok} · evento: ${data.evento || '?'}`;
+    }
+    if (skillName === 'parsear_pedido') {
+      const items = data.items ? data.items.length : (data.data && data.data.items ? data.data.items.length : 0);
+      return `ok: ${data.ok} · items: ${items}`;
+    }
+    if (skillName === 'pedir_aclaracion') {
+      return `ok: ${data.ok} · pregunta: ${(data.pregunta || data.question || '').toString().substring(0, 30)}`;
+    }
+    // Fallback: mostrar claves principales
+    const keys = Object.keys(data).slice(0, 4);
+    const resumen = keys.map(k => {
+      const v = data[k];
+      if (typeof v === 'number') return `${k}: ${v}`;
+      if (typeof v === 'string') return `${k}: "${v.substring(0, 25)}"`;
+      if (Array.isArray(v)) return `${k}: [${v.length}]`;
+      return `${k}: {}`;
+    });
+    return resumen.join(' · ');
+  } catch (e) {
+    return '(resultado no serializable)';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

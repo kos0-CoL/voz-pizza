@@ -1,0 +1,94 @@
+# Configuración global de agentes (reemplaza/hardcodea config/agents.py)
+agents:
+  main:
+    id: main
+    name: "🎤 Principal"
+    type: PIPELINE_WORKER
+    description: "Maneja transporte (STT/TTS) y coordina handoffs"
+    skills: []
+    handoffs:
+      - intake
+    enabled: true
+    activation_rules: []
+    max_turns: 1
+    temperature: 0.1
+
+  intake:
+    id: intake
+    name: "🎙️ Receptor"
+    type: LLM_CONTEXT_WORKER
+    description: "Parsea texto libre del cliente en items estructurados del catálogo"
+    model: gemini-3.5-flash-lite
+    provider: gemini
+    skills:
+      - buscar_en_catalogo
+      - pedir_aclaracion
+    handoffs:
+      - validator
+      - clarifier
+    enabled: true
+    activation_rules:
+      - start_of_conversation
+      - after_clarification_response
+    max_turns: 6
+    temperature: 0.2
+
+  validator:
+    id: validator
+    name: "✅ Validador"
+    type: LLM_CONTEXT_WORKER
+    description: "Verifica stock y calcula el total exacto del pedido"
+    model: gemini-3.5-flash-lite
+    provider: gemini
+    skills:
+      - buscar_en_catalogo
+      - verificar_stock
+      - calcular_total
+      - pedir_aclaracion
+    handoffs:
+      - confirmer
+      - clarifier
+    enabled: true
+    activation_rules:
+      - items_parsed
+    max_turns: 6
+    temperature: 0.2
+
+  confirmer:
+    id: confirmer
+    name: "🎫 Confirmador"
+    type: LLM_CONTEXT_WORKER
+    description: "Confirma pedidos ya validados, genera número y registra analytics"
+    model: gemini-3.5-flash-lite
+    provider: gemini
+    skills:
+      - confirmar_pedido
+      - analytics_registrar_evento
+    handoffs: []
+    enabled: true
+    activation_rules:
+      - total_calculated
+    max_turns: 3
+    temperature: 0.1
+
+  clarifier:
+    id: clarifier
+    name: "❓ Aclarador"
+    type: LLM_CONTEXT_WORKER
+    description: "Resuelve ambigüedades y pregunta al cliente cuando falta información crítica"
+    model: gemini-3.5-flash-lite
+    provider: gemini
+    skills:
+      - pedir_aclaracion
+      - buscar_en_catalogo
+    handoffs:
+      - intake
+      - validator
+    enabled: true
+    activation_rules:
+      - missing_size
+      - stock_insufficient
+      - unknown_item
+      - total_problems
+    max_turns: 3
+    temperature: 0.3

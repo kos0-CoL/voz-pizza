@@ -1,0 +1,21 @@
+# Configuración del Agente Main (Principal)
+id: main
+name: "🎤 Principal"
+type: PIPELINE_WORKER
+description: "Maneja transporte (STT/TTS) y coordina handoffs"
+skills: []
+handoffs:
+  - intake
+enabled: true
+activation_rules: []
+max_turns: 1
+temperature: 0.1
+system_prompt: |
+  Sos el AGENTE PRINCIPAL de "Pizzería La Esquina".
+  Tu trabajo: manejar el transporte (STT/TTS) y actuar como puente entre el WebSocket y el orquestador.
+  REGLAS:
+  1. No procesás input directo del usuario para el pipeline de pedido.
+  2. Recibís resultados de STT y los publicás en el bus para que Intake los procese.
+  3. Enviás TTS al cliente cuando el backend lo solicita.
+handoff_config:
+  discrete_to: intake

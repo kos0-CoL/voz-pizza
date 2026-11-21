@@ -25,36 +25,41 @@ HANDOFFS:
 
 
 class ValidatorAgent(Agent):
-    
+    """Agente Validador. Verifica stock y calcula el total del pedido."""
+
     def __init__(self, config: AgentConfig, skill_registry: SkillRegistry, bus):
         super().__init__(config, skill_registry, bus)
-    
+
     async def on_activate(self, context: ConversationContext, args: Dict = None):
+        """Al activarse, recibe items_parsed y ejecuta la validación de items."""
         if args and args.get("items_parsed"):
             self.context.items_parsed = args["items_parsed"]
-        
+
         await self._validate_items()
-    
+
     async def on_deactivate(self):
         pass
-    
+
     async def process_turn(self, user_input: str) -> SkillResult:
+        """El validator no procesa input directo del usuario."""
         return SkillResult(success=True, data={"message": "Validator no procesa input directo"}, terminates_turn=True)
-    
+
     async def _validate_items(self):
+        """Itera los items parseados, verifica stock de cada uno y calcula el total."""
         lineas_para_calcular = []
-        
+
         for linea in self.context.items_parsed:
             item_id = linea["item_id"]
             cantidad = linea["cantidad"]
             variante_id = linea.get("variante_id")
             extras = linea.get("extras", [])
-            
+
+            # Verificar stock de este item
             stock_result = await self.execute_skill("verificar_stock", {
                 "item_id": item_id,
                 "cantidad": cantidad
             }, self.context)
-            
+
             if not stock_result.success or not stock_result.data.get("disponible"):
                 stock_data = stock_result.data or {}
                 await self.handoff_to(
@@ -63,18 +68,19 @@ class ValidatorAgent(Agent):
                     HandoffType.ANNOUNCED
                 )
                 return
-            
+
             lineas_para_calcular.append({
                 "item_id": item_id,
                 "variante_id": variante_id,
                 "cantidad": cantidad,
                 "extras": extras
             })
-        
+
+        # Calcular total de todas las líneas validadas
         total_result = await self.execute_skill("calcular_total", {
             "lineas": lineas_para_calcular
         }, self.context)
-        
+
         if not total_result.success:
             problemas = total_result.data.get("problemas", [total_result.error]) if total_result.data else [total_result.error]
             await self.handoff_to(
@@ -83,9 +89,9 @@ class ValidatorAgent(Agent):
                 HandoffType.ANNOUNCED
             )
             return
-        
+
         self.context.total_calculated = total_result.data
-        
+
         await self.handoff_to(
             "confirmer",
             f"Total calculado: {total_result.data['total']} {total_result.data['moneda']}. {len(total_result.data['lineas'])} líneas validadas.",

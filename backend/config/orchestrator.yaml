@@ -1,0 +1,28 @@
+# Configuración del orquestador
+orchestrator:
+  handoff:
+    max_retries: 3
+    timeout_seconds: 30
+    announce_tts: true
+
+  planner:
+    llm_routing_enabled: false
+    fallback_agent: intake
+
+  eligibility:
+    eval_enabled: true
+    safe_builtins:
+      - len
+      - str
+      - int
+      - bool
+      - list
+      - dict
+
+  memory:
+    storage_path: data/sessions
+    persist_enabled: true
+
+  traces:
+    emit_to_websocket: true
+    max_trace_events: 100

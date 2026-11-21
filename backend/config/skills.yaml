@@ -1,0 +1,40 @@
+# Configuración de skills habilitadas y placeholders
+skills:
+  enabled:
+    - buscar_en_catalogo
+    - verificar_stock
+    - calcular_total
+    - pedir_aclaracion
+    - confirmar_pedido
+    - extraer_items
+    - detectar_cantidad
+    - detectar_variante
+    - validar_pedido_completo
+    - analytics_registrar_evento
+
+  disabled_placeholders:
+    whatsapp:
+      reason: "Requiere API de WhatsApp Business no configurada"
+    push:
+      reason: "Requiere servicio de push notifications no configurado"
+    email:
+      reason: "Requiere servidor SMTP no configurado"
+    cocina:
+      reason: "Requiere integración con sistema de cocina (KDS)"
+    cliente:
+      reason: "Requiere base de datos de clientes (CRM)"
+    config:
+      reason: "Placeholder para configuración dinámica de skills"
+
+  parameters_schema:
+    buscar_en_catalogo:
+      required: ["nombre"]
+      optional: ["variante_id"]
+    verificar_stock:
+      required: ["item_id", "cantidad"]
+    calcular_total:
+      required: ["lineas"]
+    pedir_aclaracion:
+      required: ["pregunta"]
+    confirmar_pedido:
+      required: ["cliente_data", "lineas"]

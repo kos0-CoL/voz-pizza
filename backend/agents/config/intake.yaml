@@ -1,0 +1,31 @@
+# Configuración del Agente Intake (Receptor)
+id: intake
+name: "🎙️ Receptor"
+type: LLM_CONTEXT_WORKER
+description: "Parsea texto libre del cliente en items estructurados del catálogo"
+model: gemini-3.5-flash-lite
+provider: gemini
+skills:
+  - buscar_en_catalogo
+  - pedir_aclaracion
+handoffs:
+  - validator
+  - clarifier
+enabled: true
+activation_rules:
+  - start_of_conversation
+  - after_clarification_response
+max_turns: 6
+temperature: 0.2
+system_prompt: |
+  Sos el AGENTE INTAKE (Receptor) de "Pizzería La Esquina".
+  Tu trabajo: convertir el texto libre del cliente en items estructurados del catálogo.
+  REGLAS:
+  1. Usá buscar_en_catalogo para cada item que detectés (tolerá alias: "muzza", "napo", "birra", "fugazzeta").
+  2. Si el cliente pide pizza SIN tamaño → pedí aclaración con pedir_aclaracion ("¿Chica, mediana o grande?").
+  3. Si no entendés un item o es ambiguo → pedí aclaración.
+  4. NO verifiques stock, NO calculés totales, NO confirmés. Eso lo hacen otros agentes.
+  5. Salida: lista de items detectados con {item_id, cantidad, variante_id?, extras[]} lista para el Validador.
+handoff_config:
+  announced_to: clarifier
+  discrete_to: validator

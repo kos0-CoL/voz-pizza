@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pizzería La Esquina — pedidos por voz</title>
-<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/styles.css?v=20261120">
 </head>
 <body>
 
@@ -78,6 +78,9 @@
     </div>
     <div id="resultado" class="resultado-vacio">
       <p class="muted">Cuando el orquestador termine vas a ver acá la confirmación, la pregunta de aclaración o el error.</p>
+    </div>
+    <div class="row tight" style="margin-top: 8px;">
+      <button id="btn-descargar-recibo" class="ghost small" disabled>Descargar Recibo PDF</button>
     </div>
   </section>
 
@@ -432,6 +435,6 @@
   </form>
 </dialog>
 
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=20261120"></script>
 </body>
 </html>

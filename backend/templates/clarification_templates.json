@@ -1,0 +1,7 @@
+{
+  "missing_size": "La {item}: ¿la querés chica, mediana o grande?",
+  "missing_quantity": "¿Cuántos {item} querés?",
+  "stock_low": "De {item} quedan {stock} y pediste {cantidad}. ¿Ajustamos a {stock}?",
+  "unknown_item": "No tenemos {item}. ¿Quizás {alternativa}?",
+  "total_problems": "Problema en el total: {detalle}. ¿Cómo lo resolvemos?"
+}

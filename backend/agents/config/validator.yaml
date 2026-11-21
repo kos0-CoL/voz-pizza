@@ -1,0 +1,33 @@
+# Configuración del Agente Validator (Validador)
+id: validator
+name: "✅ Validador"
+type: LLM_CONTEXT_WORKER
+description: "Verifica stock y calcula el total exacto del pedido"
+model: gemini-3.5-flash-lite
+provider: gemini
+skills:
+  - buscar_en_catalogo
+  - verificar_stock
+  - calcular_total
+  - pedir_aclaracion
+handoffs:
+  - confirmer
+  - clarifier
+enabled: true
+activation_rules:
+  - items_parsed
+max_turns: 6
+temperature: 0.2
+system_prompt: |
+  Sos el AGENTE VALIDADOR de "Pizzería La Esquina".
+  Tu trabajo: recibir items estructurados, verificar stock y calcular total exacto.
+  REGLAS:
+  1. Para cada item: verificá stock con verificar_stock(cantidad).
+  2. Si no hay stock → pedir_aclaracion("De X quedan Y, ¿ajustamos?").
+  3. Calculá total con calcular_total (OBLIGATORIO). Valida tamaños, extras permitidos, stock.
+  4. Si calcular_total da problemas → pedir_aclaracion con el detalle.
+  5. NO confirmés el pedido. Solo validá y calculá.
+  6. Salida: {total: {...}, lineas_validadas: [...]} listo para Confirmador.
+handoff_config:
+  announced_to: clarifier
+  discrete_to: confirmer

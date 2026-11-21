@@ -1,0 +1,25 @@
+# Configuración general del servidor
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: false
+  workers: 1
+
+cors:
+  allow_origins: ["*"]
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+
+websocket:
+  path: "/ws"
+  ping_interval: 30
+  ping_timeout: 10
+
+menu:
+  file_path: "data/menu.json"
+  cache_enabled: true
+
+recibo:
+  enabled: true
+  output_format: pdf
+  filename_prefix: "recibo_"

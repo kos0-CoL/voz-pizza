@@ -30,40 +30,44 @@ HANDOFFS:
 
 
 class ClarifierAgent(Agent):
-    
+    """Agente Aclarador. Genera preguntas cuando falta información crítica del pedido."""
+
     def __init__(self, config, skill_registry, bus):
         super().__init__(config, skill_registry, bus)
-    
+
     async def on_activate(self, context, args: Dict = None):
+        """Al activarse, lee last_handoff_reason y genera la pregunta de aclaración."""
         logger.info(f"Clarifier({context.session_id}): on_activate called with args={args}")
-        
+
         # Usar last_handoff_reason del contexto en lugar de args
         reason = context.last_handoff_reason or args.get("reason", "Aclaración requerida")
         self.context.aclaracion_pendiente = reason
         await self._ask_clarification()
-    
+
     async def on_deactivate(self):
         pass
-    
+
     async def process_turn(self, user_input: str) -> SkillResult:
+        """Cuando el usuario responde la aclaración, hace handoff de vuelta a intake."""
         self.context.transcript.append({"role": "user", "content": user_input})
         self.context.aclaracion_pendiente = None
-        
+
         await self.handoff_to(
             "intake",
             f"Respuesta a aclaración: {user_input}",
             HandoffType.DISCRETE
         )
-        
+
         return SkillResult(
             success=True,
             data={"response": user_input, "next_agent": "intake"},
             terminates_turn=True
         )
-    
+
     async def _ask_clarification(self):
+        """Genera la pregunta de aclaración según el tipo de problema y la publica."""
         reason = self.context.aclaracion_pendiente or ""
-        
+
         if "Falta tamaño" in reason:
             pregunta = reason.replace("Falta tamaño para: ", "") + ": ¿la querés chica, mediana o grande?"
         elif "Falta cantidad" in reason:
@@ -76,9 +80,9 @@ class ClarifierAgent(Agent):
             pregunta = reason + " ¿Cómo lo resolvemos?"
         else:
             pregunta = f"Necesito que me aclares: {reason}"
-        
+
         await self.execute_skill("pedir_aclaracion", {"pregunta": pregunta}, self.context)
-        
+
         # Publicar evento para que el handler WebSocket lo reciba
         await self.bus.publish("clarification_requested", {
             "session_id": self.context.session_id,

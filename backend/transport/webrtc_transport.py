@@ -91,7 +91,13 @@ class WebSocketTransport(BaseTransport):
 
         @router.get("/")
         async def root():
-            return FileResponse("/app/index.html")
+            docker_path = "/app/index.html"
+            dev_path = os.path.join(os.path.dirname(__file__), "..", "..", "index.html")
+            index_path = docker_path if os.path.exists(docker_path) else dev_path
+            return FileResponse(
+                index_path,
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"},
+            )
 
         @router.get("/api/menu")
         async def get_menu():
@@ -100,6 +106,24 @@ class WebSocketTransport(BaseTransport):
             dev_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "menu.json")
             menu_path = docker_path if os.path.exists(docker_path) else dev_path
             with open(menu_path, "r") as f:
+                return json.load(f)
+
+        @router.get("/data/menu.json")
+        async def get_menu_json():
+            import json
+            docker_path = "/app/data/menu.json"
+            dev_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "menu.json")
+            menu_path = docker_path if os.path.exists(docker_path) else dev_path
+            with open(menu_path, "r") as f:
+                return json.load(f)
+
+        @router.get("/data/pedidos-prueba.json")
+        async def get_pedidos_prueba():
+            import json
+            docker_path = "/app/data/pedidos-prueba.json"
+            dev_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "pedidos-prueba.json")
+            pedidos_path = docker_path if os.path.exists(docker_path) else dev_path
+            with open(pedidos_path, "r") as f:
                 return json.load(f)
 
         @router.get("/api/health")

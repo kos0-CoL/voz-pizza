@@ -1,0 +1,7 @@
+¡Pedido confirmado! 🍕
+
+Pedido: {pedido}
+Total: {moneda} {total}
+Tiempo estimado: {tiempo_estimado_min} minutos
+
+¡Gracias por elegir Pizzería La Esquina!
